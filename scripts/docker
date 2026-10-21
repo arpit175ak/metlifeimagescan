@@ -1,14 +1,33 @@
 #!/usr/bin/env python3
-"""Transparent Docker CLI wrapper: time the official action's sole build, verify before scan."""
-import datetime, json, os, pathlib, subprocess, sys, time
-args=sys.argv[1:]
-if args[:1] != ['build']:
-    os.execv(os.environ['REAL_DOCKER'],[os.environ['REAL_DOCKER'],*args])
-start=datetime.datetime.now(datetime.timezone.utc).isoformat()
-t=time.monotonic()
-rc=subprocess.call([os.environ['REAL_DOCKER'],*args])
-pathlib.Path('results').mkdir(exist_ok=True)
-pathlib.Path('results/build.json').write_text(json.dumps({'started_at':start,'completed_at':datetime.datetime.now(datetime.timezone.utc).isoformat(),'seconds':time.monotonic()-t,'exit_code':rc},indent=2)+'\n')
-if rc == 0:
-    rc=subprocess.call(['bash','scripts/verify-image.sh','metlife-benchmark:latest'])
+"""Delegate Docker unchanged; measure official-action build/pull/scanner invocations."""
+import datetime
+import json
+import os
+from pathlib import Path
+import subprocess
+import sys
+import time
+
+args = sys.argv[1:]
+kind = args[0] if args else ''
+if kind not in {'build', 'pull', 'run'}:
+    os.execv(os.environ['REAL_DOCKER'], [os.environ['REAL_DOCKER'], *args])
+started = datetime.datetime.now(datetime.timezone.utc).isoformat()
+t = time.monotonic()
+rc = subprocess.call([os.environ['REAL_DOCKER'], *args])
+event = {'kind': kind, 'started_at': started,
+         'completed_at': datetime.datetime.now(datetime.timezone.utc).isoformat(),
+         'seconds': time.monotonic() - t, 'exit_code': rc}
+Path('results').mkdir(exist_ok=True)
+with Path('results/docker-events.jsonl').open('a') as f:
+    f.write(json.dumps(event) + '\n')
+if kind == 'build':
+    Path('results/build.json').write_text(json.dumps(event, indent=2) + '\n')
+    if rc == 0:
+        rc = subprocess.call(['bash', 'scripts/verify-image.sh', 'metlife-benchmark:latest'])
+        expected = os.environ.get('FIXTURE_IMAGE_ID')
+        actual = json.loads(Path('results/image-metadata.json').read_text())['image_id']
+        if expected and actual != expected:
+            print('ERROR: official action rebuilt a different image than the shared fixture', file=sys.stderr)
+            rc = 1
 sys.exit(rc)

@@ -41,6 +41,15 @@ metrics = {
     'Concurrent scans': '1 baseline job configured; concurrency testing pending successful baseline',
     'Measured throughput': 'Pending verified successful scans and completed batch timing',
 }
+events_path = ROOT / 'docker-events.jsonl'
+if events_path.exists():
+    events = [json.loads(line) for line in events_path.read_text().splitlines() if line]
+    pulls = [e for e in events if e['kind'] == 'pull']
+    runs = [e for e in events if e['kind'] == 'run']
+    if pulls:
+        metrics['Scanner container pull duration'] = f"{sum(e['seconds'] for e in pulls):.3f} s (scanner tooling image, not benchmark image)"
+    if runs:
+        metrics['Scanner invocation wall duration'] = f"{sum(e['seconds'] for e in runs):.3f} s (container startup, DB/network, vulnerability and default secret analysis; not pure vulnerability analysis)"
 report = Path('results-vuln.json')
 if not report.exists():
     report = ROOT / 'results-vuln.json'

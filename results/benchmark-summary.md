@@ -1,26 +1,28 @@
 # MetLife AccuKnox container benchmark
 
+Run: https://github.com/arpit175ak/metlifeimagescan/actions/runs/39675041921
+
 | Metric | Actual result |
 |---|---|
 | CI/CD platform | GitHub Actions |
-| Image name | Pending execution |
-| Image digest | Pending execution |
-| Image size | Pending build |
+| Image name | metlife-benchmark:latest |
+| Image digest | sha256:750e004ad2183cdd5d5d571626581d3a622ca2f6be1b01a61253082df97013f5 (local image configuration digest; not registry manifest digest) |
+| Image size | 2,114,431,762 bytes (2.114 GB), Docker virtual/uncompressed size |
 | Compressed registry image size | Unavailable: benchmark image is local and is not pushed to a registry |
 | Image download size | Not separately measurable |
-| Runner CPU/RAM | Pending execution |
-| Scanner version | Pending runtime evidence |
-| Build duration | Pending build |
+| Runner CPU/RAM | 4 logical CPUs / 15.61 GiB RAM |
+| Scanner version | ASPM CLI v0.14.0 (download URL); container engine image aquasec/trivy:0.65.0 (configured version; binary --version not independently queried) |
+| Build duration | 21.546 s (includes base-image acquisition and build export) |
 | Image pull duration | Not separately measurable |
-| Scanner setup/initialization duration | Not separately measurable |
+| Scanner setup/initialization duration | 2.869 s (CLI download and tool install only; scanner-container pull/database work follows) |
 | Actual scanner analysis duration | Not separately measurable |
-| AccuKnox action duration | Pending completed job metadata |
-| Results upload duration | Not separately measurable |
-| Total CI/CD job duration | Pending completed job metadata |
-| Total workflow duration | Pending completed run metadata |
-| Vulnerability findings | Pending valid scan report |
-| Scan status | Pending execution; scanner completion and tenant upload require separate verification |
-| Console upload status | Pending explicit upload confirmation; a green action alone is insufficient |
+| AccuKnox action duration | 247.000 s (includes internal build, setup, database/network, scan and uploads) |
+| Results upload duration | 4.175 s (client log interval; includes HTTP request/response) |
+| Total CI/CD job duration | 253.000 s (includes runner job preparation and cleanup) |
+| Total workflow duration | 257.000 s (creation to terminal update; includes queueing) |
+| Vulnerability findings | 14353 package vulnerability records (not deduplicated CVEs) |
+| Scan status | Completed with vulnerability findings; soft_fail accepted findings; successful HTTP console upload confirmed |
+| Console upload status | Scanner confirmed successful HTTP upload; tenant UI ingestion/display not independently verified |
 | Concurrent scans | 1 baseline job configured; concurrency testing pending successful baseline |
 | Measured throughput | Pending verified successful scans and completed batch timing |
 

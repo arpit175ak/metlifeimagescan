@@ -1,6 +1,24 @@
 name: MetLife container benchmark
+run-name: "MetLife ${{ inputs.batch_id || github.run_id }} / ${{ inputs.sample || 'baseline' }}"
 on:
   workflow_dispatch:
+    inputs:
+      fixture_only:
+        description: Build/export a shared image after a successful baseline
+        type: boolean
+        default: false
+      fixture_run_id:
+        description: Completed fixture-export run ID (empty builds normal baseline)
+        type: string
+        default: ''
+      batch_id:
+        description: Controlled batch identifier
+        type: string
+        default: ''
+      sample:
+        description: Sample identifier within the batch
+        type: string
+        default: ''
   push:
     branches: [main]
     paths-ignore: ['results/**', 'README.md']
@@ -8,7 +26,7 @@ permissions:
   contents: read
   actions: read
 concurrency:
-  group: metlife-baseline
+  group: metlife-${{ inputs.batch_id || 'baseline' }}-${{ inputs.sample || 'single' }}
   cancel-in-progress: false
 jobs:
   baseline:
@@ -25,6 +43,12 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p results
+          python3 - <<'PYRESET'
+          from pathlib import Path
+          for p in Path('results').glob('*'):
+              if p.is_file() and p.name != '.gitkeep':
+                  p.unlink()
+          PYRESET
           for name in ACCUKNOX_TOKEN ACCUKNOX_LABEL ACCUKNOX_ENDPOINT; do
             test -n "${!name}" || { echo "::error::Missing secret $name"; exit 1; }
           done
@@ -38,7 +62,39 @@ jobs:
           pathlib.Path('results/runner.json').write_text(json.dumps(x,indent=2)+'\n')
           PY
           git ls-remote https://github.com/accuknox/container-scan-action.git refs/heads/latest refs/tags/latest > results/action-reference.txt
+      - name: Download immutable shared fixture
+        if: inputs.fixture_run_id != ''
+        uses: actions/download-artifact@v4
+        with:
+          name: metlife-shared-fixture
+          path: fixture
+          run-id: ${{ inputs.fixture_run_id }}
+          github-token: ${{ github.token }}
+      - name: Load and verify shared fixture
+        if: inputs.fixture_run_id != ''
+        run: |
+          set -euo pipefail
+          (cd fixture && sha256sum --check image.tar.gz.sha256)
+          python3 - <<'PYLOAD'
+          import datetime,json,pathlib,subprocess,time
+          start=datetime.datetime.now(datetime.timezone.utc).isoformat()
+          t=time.monotonic()
+          subprocess.run(['bash','-o','pipefail','-c','gzip -dc fixture/image.tar.gz | "$REAL_DOCKER" load'],check=True)
+          pathlib.Path('results/image-load.json').write_text(json.dumps({'started_at':start,'completed_at':datetime.datetime.now(datetime.timezone.utc).isoformat(),'seconds':time.monotonic()-t},indent=2)+'\n')
+          PYLOAD
+          expected=$(python3 -c 'import json; print(json.load(open("fixture/image-metadata.json"))["image_id"])')
+          actual=$("$REAL_DOCKER" image inspect metlife-benchmark:latest --format '{{.Id}}')
+          test "$expected" = "$actual"
+          echo "FIXTURE_IMAGE_ID=$expected" >> "$GITHUB_ENV"
+          "$REAL_DOCKER" tag metlife-benchmark:latest metlife-benchmark:shared
+          # No new layers/config: the official action's mandatory build must retain the shared ID.
+          echo 'FROM metlife-benchmark:shared' > Dockerfile
+          cp fixture/image-metadata.json results/shared-fixture-metadata.json
+      - name: Build shared fixture only
+        if: inputs.fixture_only == true
+        run: docker build -t metlife-benchmark:latest -f Dockerfile .
       - name: AccuKnox official action (build, setup, scan, upload)
+        if: inputs.fixture_only != true
         id: scan
         uses: accuknox/container-scan-action@latest
         env:
@@ -56,6 +112,23 @@ jobs:
           upload_results: true
           generate_sbom: false
           dockerfile_context: Dockerfile
+      - name: Export shared fixture
+        if: inputs.fixture_only == true
+        run: |
+          set -euo pipefail
+          mkdir -p fixture
+          "$REAL_DOCKER" save metlife-benchmark:latest | gzip -1 > fixture/image.tar.gz
+          (cd fixture && sha256sum image.tar.gz > image.tar.gz.sha256)
+          cp results/image-metadata.json fixture/image-metadata.json
+          stat -c %s fixture/image.tar.gz > results/fixture-transfer-bytes.txt
+      - name: Preserve immutable shared fixture
+        if: inputs.fixture_only == true
+        uses: actions/upload-artifact@v4
+        with:
+          name: metlife-shared-fixture
+          path: fixture/
+          compression-level: 0
+          retention-days: 3
       - name: Summarize measured evidence
         if: always()
         env:
@@ -71,6 +144,15 @@ jobs:
           PY
           fi
           python3 scripts/benchmark-summary.py
+          if test "${SCAN_OUTCOME}" = success; then
+            python3 - <<'PYVALIDATE'
+          import json
+          from pathlib import Path
+          x=json.loads(Path('results-vuln.json').read_text())
+          assert x.get('SchemaVersion') and isinstance(x.get('Results'), list), 'Invalid scanner report'
+          assert any(r.get('Vulnerabilities') for r in x['Results']), 'Expected fixture findings were not confirmed'
+          PYVALIDATE
+          fi
           cat results/benchmark-summary.md >> "$GITHUB_STEP_SUMMARY"
       - name: Preserve benchmark evidence
         if: always()

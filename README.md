@@ -45,6 +45,8 @@ gh api repos/arpit175ak/metlifeimagescan/actions/runs/RUN_ID > results/run.json
 python3 scripts/benchmark-summary.py
 ```
 
+For automated retrieval and allowlisted log-based upload/setup timings, run `python3 scripts/collect-results.py RUN_ID` after completion. Run it with network access to GitHub. The collector records successful HTTP upload separately from independently checking tenant UI ingestion.
+
 Raw logs can include tenant metadata; review before committing. Commit only non-sensitive, verified measurements and customer summaries. `results/verified-evidence.json`, when present, records explicit evidence and can enrich summary metrics; never populate it from assumptions.
 
 Local build, when Docker is running:
@@ -64,3 +66,18 @@ Proposed on-premises sizing: 3 × (8 vCPU, 32 GB RAM, 500 GB storage) = 24 vCPU,
 ## Observed registry failure and supported fallback
 
 Initial run [39674424863](https://github.com/arpit175ak/metlifeimagescan/actions/runs/39674424863) built the fixture but failed before vulnerability analysis: the default `public.ecr.aws/k9v9d5v2/aquasec/trivy:0.65.0` returned `toomanyrequests: Data limit exceeded`. The verified [ASPM v0.14.0 implementation](https://github.com/accuknox/aspm-scanner-cli/blob/v0.14.0/aspm_cli/scan/container.py) supports the `SCAN_IMAGE` environment variable. The workflow uses `aquasec/trivy:0.65.0` from the scanner publisher on Docker Hub, keeping the official action unchanged and adding no action inputs or scanner flags. Scanner pulls remain part of the measured action.
+
+## Controlled concurrency after the confirmed baseline
+
+Baseline run [39675041921](https://github.com/arpit175ak/metlifeimagescan/actions/runs/39675041921) confirmed findings and successful HTTP upload. Its immutable evidence is in `results/baseline-39675041921/`.
+
+Concurrency uses separate workflow runs, because the official action's fixed `accuknox-scan-results` artifact name would collide across matrix jobs in one run. First dispatch `fixture_only=true`: that run builds once and exports a SHA256-checked compressed Docker archive for three days. Dispatch each sample with that completed `fixture_run_id`, one common `batch_id` and a distinct `sample`. Each sample downloads and loads the identical archive, asserts its image ID, and gives the action a one-line `FROM` Dockerfile referencing the loaded local image. The action still performs its mandatory build; the wrapper rejects any changed image ID before scanning.
+
+Example (use real IDs):
+
+```bash
+gh workflow run container-scan.yml -f fixture_only=true -f batch_id=fixture -f sample=seed
+gh workflow run container-scan.yml -f fixture_run_id=FIXTURE_RUN_ID -f batch_id=batch5 -f sample=1
+```
+
+The compressed Docker archive is a transfer artifact, not a registry image. Its transfer bytes and loading duration must be reported separately from scanning. All samples use `ubuntu-latest`; CPU/RAM are measured per sample. GitHub's [documented standard-runner limits](https://docs.github.com/en/actions/reference/limits#job-concurrency-limits-for-github-hosted-runners) start at 20 concurrent jobs on Free. The repository is public and uses standard Linux runners; this test is capped at 10, with observed overlap and queueing reported rather than assuming available capacity. The billing API was unavailable with existing token scopes; no broader scopes were requested.

@@ -1,0 +1,46 @@
+{
+  "records": 14353,
+  "unique_vulnerability_ids": 9637,
+  "by_severity": {
+    "LOW": 3176,
+    "HIGH": 2716,
+    "MEDIUM": 8095,
+    "UNKNOWN": 118,
+    "CRITICAL": 248
+  },
+  "report_schema_version": 2,
+  "created_at": "2026-10-21T21:03:33.519439503Z",
+  "report_sha256": "b606d542c1c1b32ff77f9abcc35db851f93cba737a73bd5a053cc4f3a07786ba",
+  "sample": [
+    {
+      "id": "CVE-2011-3374",
+      "package": "apt",
+      "installed": "2.2.4",
+      "severity": "LOW"
+    },
+    {
+      "id": "CVE-2022-3715",
+      "package": "bash",
+      "installed": "5.1-2+deb11u1",
+      "severity": "HIGH"
+    },
+    {
+      "id": "TEMP-0841856-B18BAF",
+      "package": "bash",
+      "installed": "5.1-2+deb11u1",
+      "severity": "LOW"
+    },
+    {
+      "id": "CVE-2017-13716",
+      "package": "binutils",
+      "installed": "2.35.2-2",
+      "severity": "LOW"
+    },
+    {
+      "id": "CVE-2018-20673",
+      "package": "binutils",
+      "installed": "2.35.2-2",
+      "severity": "LOW"
+    }
+  ]
+}
