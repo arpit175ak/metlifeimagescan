@@ -1,0 +1,5 @@
+__pycache__/
+*.pyc
+accuknox-aspm-scanner
+results.json
+results-*.json

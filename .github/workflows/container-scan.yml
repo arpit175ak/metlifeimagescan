@@ -1,0 +1,79 @@
+name: MetLife container benchmark
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths-ignore: ['results/**', 'README.md']
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: metlife-baseline
+  cancel-in-progress: false
+jobs:
+  baseline:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Prepare Docker and instrumentation
+        env:
+          ACCUKNOX_TOKEN: ${{ secrets.ACCUKNOX_TOKEN }}
+          ACCUKNOX_LABEL: ${{ secrets.ACCUKNOX_LABEL }}
+          ACCUKNOX_ENDPOINT: ${{ secrets.ACCUKNOX_ENDPOINT }}
+        run: |
+          set -euo pipefail
+          mkdir -p results
+          for name in ACCUKNOX_TOKEN ACCUKNOX_LABEL ACCUKNOX_ENDPOINT; do
+            test -n "${!name}" || { echo "::error::Missing secret $name"; exit 1; }
+          done
+          docker info > results/docker-info.txt
+          echo "REAL_DOCKER=$(command -v docker)" >> "$GITHUB_ENV"
+          chmod +x scripts/docker scripts/verify-image.sh
+          echo "$GITHUB_WORKSPACE/scripts" >> "$GITHUB_PATH"
+          python3 - <<'PY'
+          import datetime,json,os,pathlib,time
+          x={'started_at':datetime.datetime.now(datetime.timezone.utc).isoformat(),'monotonic_start':time.monotonic(),'cpu':os.cpu_count(),'ram_bytes':os.sysconf('SC_PAGE_SIZE')*os.sysconf('SC_PHYS_PAGES'),'run_id':os.environ['GITHUB_RUN_ID'],'attempt':os.environ['GITHUB_RUN_ATTEMPT']}
+          pathlib.Path('results/runner.json').write_text(json.dumps(x,indent=2)+'\n')
+          PY
+          git ls-remote https://github.com/accuknox/container-scan-action.git refs/heads/latest refs/tags/latest > results/action-reference.txt
+      - name: AccuKnox official action (build, setup, scan, upload)
+        id: scan
+        uses: accuknox/container-scan-action@latest
+        with:
+          accuknox_token: ${{ secrets.ACCUKNOX_TOKEN }}
+          accuknox_label: ${{ secrets.ACCUKNOX_LABEL }}
+          accuknox_endpoint: ${{ secrets.ACCUKNOX_ENDPOINT }}
+          image_name: metlife-benchmark
+          tag: latest
+          severity: UNKNOWN,LOW,MEDIUM,HIGH,CRITICAL
+          soft_fail: true
+          upload_results: true
+          generate_sbom: false
+          dockerfile_context: Dockerfile
+      - name: Summarize measured evidence
+        if: always()
+        env:
+          SCAN_OUTCOME: ${{ steps.scan.outcome }}
+        run: |
+          if test -f results/image-metadata.json; then
+            "$REAL_DOCKER" image inspect metlife-benchmark:latest > results/image-inspect-after.json
+            python3 - <<'PY'
+          import json
+          a=json.load(open('results/image-metadata.json'))
+          b=json.load(open('results/image-inspect-after.json'))[0]
+          assert a['image_id']==b['Id'], 'Image changed during scan'
+          PY
+          fi
+          python3 scripts/benchmark-summary.py
+          cat results/benchmark-summary.md >> "$GITHUB_STEP_SUMMARY"
+      - name: Preserve benchmark evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: metlife-benchmark-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            results/
+            results-vuln.json
+          retention-days: 30
