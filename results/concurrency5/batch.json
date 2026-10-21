@@ -1,0 +1,29 @@
+{
+  "batch": "concurrency5",
+  "requested_concurrency": 5,
+  "fixture_run_id": 39675925233,
+  "dispatch_started_at": "2026-10-21T21:07:01.893137+00:00",
+  "runs": [
+    {
+      "sample": 1,
+      "run_id": 39676125205
+    },
+    {
+      "sample": 2,
+      "run_id": 39676129635
+    },
+    {
+      "sample": 3,
+      "run_id": 39676134635
+    },
+    {
+      "sample": 4,
+      "run_id": 39676138914
+    },
+    {
+      "sample": 5,
+      "run_id": 39676143636
+    }
+  ],
+  "dispatch_completed_at": "2026-10-21T21:07:11.905803+00:00"
+}

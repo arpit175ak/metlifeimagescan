@@ -1,0 +1,49 @@
+{
+  "batch": "concurrency10",
+  "requested_concurrency": 10,
+  "fixture_run_id": 39675925233,
+  "dispatch_started_at": "2026-10-21T21:13:02.814251+00:00",
+  "runs": [
+    {
+      "sample": 1,
+      "run_id": 39676950614
+    },
+    {
+      "sample": 2,
+      "run_id": 39676955645
+    },
+    {
+      "sample": 3,
+      "run_id": 39676959540
+    },
+    {
+      "sample": 4,
+      "run_id": 39676963776
+    },
+    {
+      "sample": 5,
+      "run_id": 39676968565
+    },
+    {
+      "sample": 6,
+      "run_id": 39676973113
+    },
+    {
+      "sample": 7,
+      "run_id": 39676977600
+    },
+    {
+      "sample": 8,
+      "run_id": 39676981575
+    },
+    {
+      "sample": 9,
+      "run_id": 39676986215
+    },
+    {
+      "sample": 10,
+      "run_id": 39676990700
+    }
+  ],
+  "dispatch_completed_at": "2026-10-21T21:13:23.002026+00:00"
+}

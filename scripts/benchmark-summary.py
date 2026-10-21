@@ -3,6 +3,7 @@
 import datetime as dt
 import json
 import os
+import sys
 from pathlib import Path
 
 ROOT = Path('results')
@@ -61,6 +62,11 @@ if report.exists():
         data = json.loads(report.read_text())
         if isinstance(data, dict) and isinstance(data.get('Results'), list) and data.get('SchemaVersion'):
             findings = [v for r in data['Results'] for v in (r.get('Vulnerabilities') or [])]
+            reported_id=data.get('Metadata',{}).get('ImageID')
+            assert reported_id == image.get('image_id'), 'Scan report image ID differs from measured image'
+            metrics['Scanned image identity']='Report Metadata.ImageID exactly matches the measured Docker image ID'
+            metrics['Scanner-reported image size']=f"{data['Metadata']['Size']:,} bytes (scanner metadata; size source differs from Docker inspect)"
+
             metrics['Vulnerability findings'] = f"{len(findings)} package vulnerability records (not deduplicated CVEs)"
             (ROOT / 'findings-count.json').write_text(json.dumps({'records':len(findings)},indent=2)+'\n')
     except (ValueError, TypeError):
@@ -84,6 +90,15 @@ verified = read('verified-evidence.json', {})
 for key, value in verified.get('metrics', {}).items():
     if key in metrics:
         metrics[key] = value
+batches=[]
+if '--include-batches' in sys.argv:
+    for directory in sorted(ROOT.glob('concurrency*')):
+        if (directory/'summary.json').exists():
+            batches.append(json.loads((directory/'summary.json').read_text()))
+batches.sort(key=lambda b:b['requested_concurrency'])
+if batches:
+    metrics['Concurrent scans']='Baseline 1; '+ '; '.join(f"requested {b['requested_concurrency']}, observed peak action overlap {b['peak_action_overlap']}" for b in batches)
+    metrics['Measured throughput']='; '.join(f"{b['successful_scans_per_hour']:.2f} successful scans/hour in {b['requested_concurrency']}-sample batch ({b['verified_successes']}/{b['samples']} verified)" for b in batches)+'; exploratory GitHub-hosted batch rates, not sustained on-premises capacity'
 (ROOT / 'metrics.json').write_text(json.dumps(metrics,indent=2)+'\n')
 text = '# MetLife AccuKnox container benchmark\n\n'
 if run.get('html_url'):
@@ -101,5 +116,24 @@ Varendra: use only the measured values above. Before committing to hundreds of b
 
 Concurrency levels 5 and 10 are pending a confirmed successful baseline, immutable shared image distribution and a review of GitHub runner limits. Queued jobs do not count as concurrent execution. Throughput = verified successful scans / elapsed batch hours; P95 requires a stated sample size and method.
 '''
+if batches:
+    text=text.replace('Concurrency levels 5 and 10 are pending a confirmed successful baseline, immutable shared image distribution and a review of GitHub runner limits.', 'Controlled concurrency batches completed after the verified baseline; details follow.')
+    text+='\n## Completed controlled batches\n\n| Requested / observed peak action overlap | Verified / failed or unverified | Batch seconds | Successful scans/hour | Mean action seconds | P95 action seconds |\n|---|---|---|---|---|---|\n'
+    for b in batches:
+        p95=b['p95_action_seconds_nearest_rank']
+        text+=f"| {b['requested_concurrency']} / {b['peak_action_overlap']} | {b['verified_successes']} / {b['failed_or_unverified']} | {b['batch_seconds']:.3f} | {b['successful_scans_per_hour']:.2f} | {b['mean_action_seconds']:.3f} | {p95 if p95 is not None else 'Unavailable (n < 5)'} |\n"
+    text+='\n| Batch | Mean archive download | Mean archive load | Mean scanner-container pull | Mean scanner invocation |\n|---|---|---|---|---|\n'
+    for b in batches:
+        phases=b.get('phase_means_seconds',{})
+        values=[f"{phases[k]:.3f} s" if k in phases else NA for k in ['fixture_download_seconds','fixture_load_seconds','scanner_pull_seconds','scanner_invocation_seconds']]
+        text+='| '+str(b['requested_concurrency'])+' | '+' | '.join(values)+' |\n'
+    text+='\nScanner invocation includes container startup, database/network operations and default scanner analysis; it is not pure vulnerability analysis. Archive downloads and Actions step timestamps have one-second API resolution. The compressed Docker archive is distinct from a compressed registry manifest and network protocol overhead.\n'
+    fixture_size=ROOT/f"shared-fixture-{batches[0].get('fixture_run_id')}"/'fixture-transfer-bytes.txt'
+    if fixture_size.exists():
+        text+=f"\nMeasured shared Docker archive size: {int(fixture_size.read_text()):,} bytes.\n"
+    text+='\nBatch time spans earliest runner-job start to latest runner-job completion, including fixture acquisition and artifacts. Dispatch-to-completion rates and per-sample UTC times/queue delays are recorded in each batch directory. P95 uses nearest rank; n=5/10 is exploratory. All concurrent samples use shared image configuration digest `'+str(batches[0]['image_id'])+'`; the initial full-build baseline has its own digest above. A compressed archive is not a registry image. Cached FROM builds in shared-image samples differ from the full baseline build. Action overlap includes setup/scan/upload; pure analysis overlap is unavailable.\n'
+for failed in sorted(ROOT.glob('failed-run-*/failure.json')):
+    attempt=json.loads(failed.read_text())
+    text+=f"\nInitial failed attempt: [{attempt['run_id']}]({attempt['url']}), {attempt['failed_phase']}: {attempt['error']}. {attempt['resolution']}. This attempt is excluded from the subsequent successful batch rates, and remains recorded as a failed attempt.\n"
 (ROOT / 'benchmark-summary.md').write_text(text)
 print(text)

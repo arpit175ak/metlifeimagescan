@@ -1,0 +1,10 @@
+{
+  "run_id": 39674424863,
+  "url": "https://github.com/arpit175ak/metlifeimagescan/actions/runs/39674424863",
+  "status": "failure",
+  "failed_phase": "scanner-container pull, before vulnerability analysis",
+  "error": "public.ecr.aws scanner image returned toomanyrequests: Data limit exceeded",
+  "vulnerability_findings": null,
+  "console_upload": "Not reached",
+  "resolution": "Verified SCAN_IMAGE environment variable selects official aquasec/trivy:0.65.0 from Docker Hub; retry succeeded"
+}

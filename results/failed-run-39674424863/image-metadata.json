@@ -1,0 +1,10 @@
+{
+  "image": "metlife-benchmark:latest",
+  "image_id": "sha256:04f547fbdb01e137f70ee6e5d9cc772c50e83e5eee3aeddad275ca5676cfb5aa",
+  "repo_digests": [],
+  "uncompressed_bytes": 2114431762,
+  "architecture": "amd64",
+  "os": "linux",
+  "compressed_registry_bytes": null,
+  "download_bytes": null
+}

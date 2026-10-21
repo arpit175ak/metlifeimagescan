@@ -149,6 +149,8 @@ jobs:
           import json
           from pathlib import Path
           x=json.loads(Path('results-vuln.json').read_text())
+          measured=json.loads(Path('results/image-metadata.json').read_text())
+          assert x.get('Metadata',{}).get('ImageID') == measured['image_id'], 'Scanned image differs from measured image'
           assert x.get('SchemaVersion') and isinstance(x.get('Results'), list), 'Invalid scanner report'
           assert any(r.get('Vulnerabilities') for r in x['Results']), 'Expected fixture findings were not confirmed'
           PYVALIDATE

@@ -91,3 +91,16 @@ python3 scripts/concurrency-benchmark.py collect --batch concurrency5
 ```
 
 The collector confirms explicit upload success, report counts, per-sample image IDs, runner specs and Actions step outcomes. It computes batch throughput from earliest job start to latest job completion, also reports dispatch-to-last-completion throughput including queueing, and measures peak overlapping official-action intervals. P95 uses nearest rank; five or ten samples give only an exploratory tail-latency estimate. Image acquisition remains separately reported.
+
+
+## Published results and regeneration
+
+See [benchmark summary](results/benchmark-summary.md), the preserved [baseline evidence](results/baseline-39675041921/), and each `results/concurrency*/` directory for sample IDs, exact UTC timestamps, report image-identity checks, phase timers, queue delay and throughput calculations. Full original reports remain in each run's Actions artifacts for 30 days; the shared fixture archive expires after three days. Historical evidence is retained in Git. Generated root JSON files are intentionally ignored to avoid mixing runtime data with historical snapshots.
+
+To regenerate the consolidated report, restore the baseline measurement files using `scripts/collect-results.py 39675041921`, collect each completed batch, then run:
+
+```bash
+python3 scripts/benchmark-summary.py --include-batches
+```
+
+The baseline report also supplies its own `Metadata.ImageID`; it exactly matches the Docker-inspected image ID. The scanner reports a separate image-size value, preserved with its source label. The >1 GB assertion always uses Docker's inspected virtual/uncompressed byte count. Image IDs are checked before/after the action, against the shared fixture for batch samples, and against report metadata during collection.

@@ -42,5 +42,12 @@
       "installed": "2.35.2-2",
       "severity": "LOW"
     }
-  ]
+  ],
+  "report_image_id": "sha256:750e004ad2183cdd5d5d571626581d3a622ca2f6be1b01a61253082df97013f5",
+  "scanner_reported_size_bytes": 2136613376,
+  "report_os": {
+    "Family": "debian",
+    "Name": "11.9",
+    "EOSL": true
+  }
 }

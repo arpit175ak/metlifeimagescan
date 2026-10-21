@@ -23,9 +23,12 @@ if run['status']!='completed':
 jobs=json.loads(gh('api',f'repos/{a.repo}/actions/runs/{a.run_id}/jobs?per_page=100'))
 with tempfile.TemporaryDirectory(prefix='metlife-artifacts-') as d:
     subprocess.run(['gh','run','download',str(a.run_id),'--repo',a.repo,'--dir',d],check=True)
-    for src in Path(d).rglob('*'):
-        if src.is_file() and src.name in {'image-load.json','docker-events.jsonl','scanner-version.txt','build.json','runner.json','image-metadata.json','image-inspect.json','image-inspect-after.json','action-reference.txt','results-vuln.json'}:
-            shutil.copy2(src,root/src.name)
+    allowed={'image-load.json','docker-events.jsonl','scanner-version.txt','build.json','runner.json','image-metadata.json','image-inspect.json','image-inspect-after.json','action-reference.txt','results-vuln.json'}
+    for artifact in Path(d).iterdir():
+        for name in allowed:
+            for src in (artifact/name, artifact/'results'/name):
+                if src.is_file():
+                    shutil.copy2(src,root/name)
 (root/'jobs.json').write_text(json.dumps(jobs,indent=2)+'\n')
 (root/'run.json').write_text(json.dumps(run,indent=2)+'\n')
 log=gh('run','view',str(a.run_id),'--repo',a.repo,'--log')

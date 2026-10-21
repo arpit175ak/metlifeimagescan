@@ -1,0 +1,33 @@
+{
+  "sample": 9,
+  "run_id": 39676986215,
+  "url": "https://github.com/arpit175ak/metlifeimagescan/actions/runs/39676986215",
+  "status": "completed",
+  "run_conclusion": "success",
+  "verified_success": true,
+  "report_image_id_matches": true,
+  "upload_http_success": true,
+  "findings_records": 14353,
+  "image_id": "sha256:c9ba3e0d62dc0596b4106e04564661f4127acfff8965eec2d9971604bbad585b",
+  "image_uncompressed_bytes": 2114431762,
+  "runner": {
+    "started_at": "2026-10-21T21:13:28.047133+00:00",
+    "monotonic_start": 72.082349947,
+    "cpu": 4,
+    "ram_bytes": 16766414848,
+    "run_id": "39676986215",
+    "attempt": "1"
+  },
+  "created_at": "2026-10-21T21:13:20Z",
+  "job_started_at": "2026-10-21T21:13:24Z",
+  "job_completed_at": "2026-10-21T21:17:50Z",
+  "action_started_at": "2026-10-21T21:14:07Z",
+  "action_completed_at": "2026-10-21T21:17:46Z",
+  "action_seconds": 219.0,
+  "job_seconds": 266.0,
+  "queue_to_job_seconds": 4.0,
+  "fixture_download_seconds": 8.0,
+  "fixture_load_seconds": 30.771552944000007,
+  "scanner_pull_seconds": 2.3803207069999957,
+  "scanner_invocation_seconds": 203.83869107700002
+}
