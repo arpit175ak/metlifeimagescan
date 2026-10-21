@@ -154,6 +154,7 @@ jobs:
           python3 - <<'PYLOAD'
           import datetime
           import json
+          import os
           import pathlib
           import subprocess
           import time
@@ -164,13 +165,15 @@ jobs:
 
           t = time.monotonic()
 
+          docker = os.environ["REAL_DOCKER"]
+
           subprocess.run(
               [
                   'bash',
                   '-o',
                   'pipefail',
                   '-c',
-                  'gzip -dc fixture/image.tar.gz | "$REAL_DOCKER" load'
+                  f'gzip -dc fixture/image.tar.gz | "{docker}" load'
               ],
               check=True
           )
@@ -209,7 +212,7 @@ jobs:
             metlife-benchmark:shared
 
           # The official action builds from Dockerfile.
-          # This reuses the existing image without adding new layers.
+          # Reuse the shared image without adding new layers.
           echo 'FROM metlife-benchmark:shared' > Dockerfile
 
           cp \
@@ -237,12 +240,10 @@ jobs:
       # the official AccuKnox Action / ASPM CLI.
       #
       # No SCAN_IMAGE override.
-      # No Docker Hub Trivy override.
       # --------------------------------------------------
 
-      - name: AccuKnox official action (build, setup, scan, upload)
+      - name: Run AccuKnox Container Scanner
         if: inputs.fixture_only != true
-
         id: scan
 
         uses: accuknox/container-scan-action@latest
@@ -252,14 +253,16 @@ jobs:
           accuknox_label: ${{ secrets.ACCUKNOX_LABEL }}
           accuknox_endpoint: ${{ secrets.ACCUKNOX_ENDPOINT }}
 
-          image_name: metlife-benchmark
-          tag: latest
+          image_name: "metlife-benchmark"
+          tag: "latest"
 
-          severity: UNKNOWN,LOW,MEDIUM,HIGH,CRITICAL
+          severity: "UNKNOWN,LOW,MEDIUM,HIGH,CRITICAL"
 
           soft_fail: true
           upload_results: true
+
           generate_sbom: false
+          project_name: ""
 
           dockerfile_context: Dockerfile
 
@@ -350,9 +353,12 @@ jobs:
           import json
           from pathlib import Path
 
-          report = json.loads(
-              Path('results-vuln.json').read_text()
-          )
+          report_path = Path('results-vuln.json')
+
+          assert report_path.exists(), \
+              'Scanner did not produce results-vuln.json'
+
+          report = json.loads(report_path.read_text())
 
           measured = json.loads(
               Path('results/image-metadata.json').read_text()
