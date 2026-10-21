@@ -1,6 +1,6 @@
 # MetLife POC — AccuKnox container image scanning benchmark
 
-Technical benchmarking owner: Varendra Maurya. Infrastructure coordination: Sanjay.
+
 
 This repository runs an initial GitHub Actions technical validation. MetLife production is strictly on-premises; GitHub-hosted runner performance does not validate the proposed on-premises capacity.
 
