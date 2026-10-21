@@ -267,7 +267,7 @@ jobs:
           dockerfile_context: Dockerfile
 
       # --------------------------------------------------
-      # 7. Export shared benchmark image
+      # 7. Export shared benchmark imagee
       # --------------------------------------------------
 
       - name: Export shared fixture
