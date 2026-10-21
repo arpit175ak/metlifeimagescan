@@ -24,7 +24,7 @@ jobs=json.loads(gh('api',f'repos/{a.repo}/actions/runs/{a.run_id}/jobs?per_page=
 with tempfile.TemporaryDirectory(prefix='metlife-artifacts-') as d:
     subprocess.run(['gh','run','download',str(a.run_id),'--repo',a.repo,'--dir',d],check=True)
     for src in Path(d).rglob('*'):
-        if src.is_file() and src.name in {'docker-events.jsonl','scanner-version.txt','build.json','runner.json','image-metadata.json','image-inspect.json','image-inspect-after.json','action-reference.txt','results-vuln.json'}:
+        if src.is_file() and src.name in {'image-load.json','docker-events.jsonl','scanner-version.txt','build.json','runner.json','image-metadata.json','image-inspect.json','image-inspect-after.json','action-reference.txt','results-vuln.json'}:
             shutil.copy2(src,root/src.name)
 (root/'jobs.json').write_text(json.dumps(jobs,indent=2)+'\n')
 (root/'run.json').write_text(json.dumps(run,indent=2)+'\n')

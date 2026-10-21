@@ -81,3 +81,13 @@ gh workflow run container-scan.yml -f fixture_run_id=FIXTURE_RUN_ID -f batch_id=
 ```
 
 The compressed Docker archive is a transfer artifact, not a registry image. Its transfer bytes and loading duration must be reported separately from scanning. All samples use `ubuntu-latest`; CPU/RAM are measured per sample. GitHub's [documented standard-runner limits](https://docs.github.com/en/actions/reference/limits#job-concurrency-limits-for-github-hosted-runners) start at 20 concurrent jobs on Free. The repository is public and uses standard Linux runners; this test is capped at 10, with observed overlap and queueing reported rather than assuming available capacity. The billing API was unavailable with existing token scopes; no broader scopes were requested.
+
+Batch automation (after the fixture run completes):
+
+```bash
+python3 scripts/concurrency-benchmark.py launch --count 5 --fixture-run-id FIXTURE_RUN_ID --batch concurrency5
+python3 scripts/concurrency-benchmark.py collect --batch concurrency5
+# Only after the five-sample batch completes, repeat with --count 10 and a new --batch.
+```
+
+The collector confirms explicit upload success, report counts, per-sample image IDs, runner specs and Actions step outcomes. It computes batch throughput from earliest job start to latest job completion, also reports dispatch-to-last-completion throughput including queueing, and measures peak overlapping official-action intervals. P95 uses nearest rank; five or ten samples give only an exploratory tail-latency estimate. Image acquisition remains separately reported.

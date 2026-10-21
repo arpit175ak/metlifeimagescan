@@ -41,6 +41,9 @@ metrics = {
     'Concurrent scans': '1 baseline job configured; concurrency testing pending successful baseline',
     'Measured throughput': 'Pending verified successful scans and completed batch timing',
 }
+load = read('image-load.json')
+if load:
+    metrics['Shared image archive load duration'] = f"{load['seconds']:.3f} s (decompression/import; download is separate)"
 events_path = ROOT / 'docker-events.jsonl'
 if events_path.exists():
     events = [json.loads(line) for line in events_path.read_text().splitlines() if line]

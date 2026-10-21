@@ -3,3 +3,6 @@ __pycache__/
 accuknox-aspm-scanner
 results.json
 results-*.json
+/results/*.json
+/results/*.jsonl
+/results/*.txt
