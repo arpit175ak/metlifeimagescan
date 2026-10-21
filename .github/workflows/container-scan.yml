@@ -41,6 +41,10 @@ jobs:
       - name: AccuKnox official action (build, setup, scan, upload)
         id: scan
         uses: accuknox/container-scan-action@latest
+        env:
+          # ASPM CLI v0.14.0 supports this environment variable.
+          # Same scanner version; default public ECR returned a data-limit error.
+          SCAN_IMAGE: aquasec/trivy:0.65.0
         with:
           accuknox_token: ${{ secrets.ACCUKNOX_TOKEN }}
           accuknox_label: ${{ secrets.ACCUKNOX_LABEL }}
